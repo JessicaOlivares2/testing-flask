@@ -4,6 +4,8 @@ from flask import session
 
 from flaskr.db import get_db
 from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
+
 
 def test_register(client, app):
     # test that viewing the page renders without template errors
@@ -17,22 +19,22 @@ def test_register(client, app):
     with app.app_context():
         usuario = get_db().execute("SELECT * FROM user WHERE username = 'a'").fetchone()
         assert (usuario is not None)
-        assert(usuario["password"] == generate_password_hash("b"))
+        assert(check_password_hash(usuario["password"],"b"))
 
 
 @pytest.mark.parametrize(
     ("username", "password",  "message"),
     (
-        ("", "", b"Username is required."),
-        ("a", "", b"Password is required."),
-        ("test", "test", b"already registered"),
+        ("", "", "Se necesita Usuario."),
+        ("a", "", "Se necesita Contraseña"),
+        ("test", "test", "ya registrado"),
     ),
 )
 def test_register_validate_input(client,username, password, message):
     response = client.post(
         "/auth/register", data={"username": username, "password": password}
     )
-    assert message in response.data
+    assert message in response.data.decode()
 
 
 def test_login(client, auth):
@@ -53,11 +55,12 @@ def test_login(client, auth):
 
 @pytest.mark.parametrize(
     ("username", "password", "message"),
-    (("a", "test", b"Incorrect username."), ("test", "a", b"Incorrect password.")),
+    (("a", "test", "Usuario incorrecto."), 
+     ("test", "a", "Contraseña incorrecta.")),
 )
 def test_login_validate_input(auth, username, password, message):
     response = auth.login(username, password)
-    assert message in response.data
+    assert message in response.data.decode()
 
 
 def test_logout(client, auth):
