@@ -12,27 +12,31 @@ def test_register(client, app):
     assert client.get("/auth/register").status_code == 200
 
     # test that successful registration redirects to the login page
-    response = client.post("/auth/register", data={"username": "a", "password": "b"})
-    assert response.headers["Location"]
+    response = client.post("/auth/register", data={"username": "a", "password": "b", "verificar": "b",})
 
     # test that the user was inserted into the database
     with app.app_context():
         usuario = get_db().execute("SELECT * FROM user WHERE username = 'a'").fetchone()
         assert (usuario is not None)
         assert(check_password_hash(usuario["password"],"b"))
+        
+    assert "Location" in response.headers
 
 
 @pytest.mark.parametrize(
-    ("username", "password",  "message"),
+    ("username", "password","verificar","verificar2",  "message"),
     (
-        ("", "", "Se necesita Usuario."),
-        ("a", "", "Se necesita Contraseña"),
-        ("test", "test", "ya registrado"),
+        ("", "v", "v","Se necesita Usuario."),
+        ("a", "","v", "Se necesita Contraseña"),
+        ("a", "v","", "Se necesita la verificacion de contraseña"),
+         ("a","f","v","Las claves no coinciden"),
+        ("test", "test","test", "ya registrado"),
+       
     ),
 )
-def test_register_validate_input(client,username, password, message):
+def test_register_validate_input(client,username, password,verificar, message):
     response = client.post(
-        "/auth/register", data={"username": username, "password": password}
+        "/auth/register", data={"username": username, "password": password,"verificar": verificar }
     )
     assert message in response.data.decode()
 
